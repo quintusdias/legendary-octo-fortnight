@@ -10,7 +10,7 @@ do
 		continue
 	fi
 	fs=$(ls -al "$pdf" | awk '{print $5}')
-	if (( fs > 20000 ))
+	if (( fs > 10000 ))
 	then
 		echo skipping "$pdf"
 		continue

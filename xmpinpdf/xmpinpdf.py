@@ -14,7 +14,7 @@ _IND_REF_REGEX = re.compile('''(?P<object_number>(\d+))\s
 #      angle brackets, the dot
 #   3) possible whitespace
 #   4) 1-3 repeated
-_DICTIONARY_PATTERN = '<<\s*(?P<dict_string>((/[\w\s[\]<>.]+)+))>>'
+_DICTIONARY_PATTERN = '<<\s*(?P<dict_string>((/[\w\s[\]<>.()-]+)+))>>'
 
 
 IndirectReference = collections.namedtuple('IndirectReference',

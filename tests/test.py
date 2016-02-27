@@ -8,6 +8,13 @@ from xmpinpdf import XmpPdf, commandline, IOErrorNoTrailer
 
 class TestSuite(unittest.TestCase):
 
+    def test_paren_chars_dash_in_dictionary_string(self):
+        """
+        Should handle [()/] characters in the dictionary strings.
+        """
+        filename = pkg.resource_filename(__name__, 'data/txt2tags-quickref.pdf')
+        XmpPdf(filename)
+
     def test_file_not_present(self):
         """
         Should error out gracefully if the input file is not found.
