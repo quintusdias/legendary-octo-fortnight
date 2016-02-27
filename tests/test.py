@@ -7,6 +7,12 @@ from xmpinpdf import XmpPdf, commandline
 
 class TestSuite(unittest.TestCase):
 
+    def test_document_catalog_with_newlines(self):
+        filename = pkg.resource_filename(__name__,
+                                         'data/SKEEntity_Animation.pdf')
+        pdf = XmpPdf(filename)
+        self.assertEqual(pdf.version, 1.5)
+
     def test_1p6(self):
         filename = pkg.resource_filename(__name__, 'data/INSP_CATHDR.pdf')
 

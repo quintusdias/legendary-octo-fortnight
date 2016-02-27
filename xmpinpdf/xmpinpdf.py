@@ -8,6 +8,16 @@ import re
 _IND_REF_REGEX = re.compile('''(?P<object_number>(\d+))\s
                                (?P<generation_number>(\d+))\sR''', re.VERBOSE)
 
+# There may be whitespace after the opening chevron.
+# The dictionary string consists of
+#   1) a slash
+#   2) an indeterminate amount of text that may include whitespace, brackets
+#      angle brackets
+#   3) possible whitespace
+#   4) 1-3 repeated
+_DICTIONARY_PATTERN = '<<\s*(?P<dict_string>((/[\w\s[\]<>]+)+))>>'
+
+
 IndirectReference = collections.namedtuple('IndirectReference',
                                            ['object_number',
                                             'generation_number'])
@@ -65,15 +75,19 @@ class XmpPdf(object):
                 lst.append(obj.offset)
         lst = sorted(lst)
 
-        # Go until the next non-free object.
-        idx = lst.index(self.xref_table[root_obj_num].offset)
-        num_bytes = lst[idx + 1] - lst[idx]
-
         self._f.seek(self.xref_table[root_obj_num].offset)
-        data = self._f.read(num_bytes).decode('utf-8').rstrip()
 
-        m = re.search('<<(?P<dictionary>.*\s?)>>', data)
-        dictionary_string = m.group('dictionary')
+        # Read the least amount of data possible.
+        idx = lst.index(self.xref_table[root_obj_num].offset)
+        if idx == len(lst) - 1:
+            # Read until the end of the file.
+            data = self._f.read().decode('utf-8').rstrip()
+        else:
+            num_bytes = lst[idx + 1] - lst[idx]
+            data = self._f.read(num_bytes).decode('utf-8').rstrip()
+
+        m = re.search(_DICTIONARY_PATTERN, data)
+        dictionary_string = m.group('dict_string')
 
         pattern = '''/(?P<key>\w+)
                      ((\s(?P<obj_num>\d+)\s
@@ -181,10 +195,8 @@ class XmpPdf(object):
         data = self._f.read().decode('utf-8')
 
         # locate the trailer dictionary
-        # Match anything between the chevrons that might have newlines
-        # embedded.
-        m = re.search('<<(.*\s+).*>>', data)
-        text = data[m.span()[0] + 3:m.span()[1] - 2]
+        m = re.search(_DICTIONARY_PATTERN, data)
+        text = m.group('dict_string')
         items = [item.strip() for item in text.split('/') if item != '']
 
         d = {}
