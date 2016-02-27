@@ -2,6 +2,7 @@ import argparse
 
 from .xmpinpdf import XmpPdf
 
+
 def pdfinfo():
 
     parser = argparse.ArgumentParser()

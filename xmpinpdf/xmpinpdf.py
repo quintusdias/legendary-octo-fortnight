@@ -1,5 +1,4 @@
 import collections
-import io
 import os
 import re
 
@@ -37,7 +36,7 @@ class XmpPdf(object):
     Attributes
     ----------
     filename : file
-        Path to PDF file. 
+        Path to PDF file.
     trailer_offset : int
         Byte offset to the trailer section.
     version : float
@@ -57,8 +56,9 @@ class XmpPdf(object):
         self.parse_document()
 
     def __del__(self):
-        self._f.close()
-        
+        if hasattr(self, '_f'):
+            self._f.close()
+
     def __str__(self):
         msg = ('Filename:  {filename}\n'
                'Version:  {version}')
@@ -72,7 +72,7 @@ class XmpPdf(object):
         except KeyError:
             self.document = None
             return
-        
+
         # How many bytes to read?  Start at the dictionary object, read until
         # the next non-free object.
         #
@@ -145,7 +145,7 @@ class XmpPdf(object):
         while True:
             try:
                 self.read_subsection()
-            except IOError:    
+            except IOError:
                 break
 
     def get_line_of_text(self):
@@ -172,7 +172,6 @@ class XmpPdf(object):
         regex = re.compile("""(?P<offset>\d+)\s
                               (?P<generation_number>\d+)\s
                               (?P<in_use_keyword>f|n)""", re.VERBOSE)
-        lst = []
         for obj_num in range(num_objs):
             xref_line = self._f.read(20).decode('utf-8').rstrip()
             m = regex.search(xref_line)
@@ -234,7 +233,7 @@ class XmpPdf(object):
                            """, re.VERBOSE)
         m = regex.search(data)
         self.startxref = int(m.group('startxref'))
-    
+
     def position_to_trailer(self):
         """
         The trailer should be close to the end of the file, we are just not
@@ -279,7 +278,7 @@ class XmpPdf(object):
                       data.decode('utf-8'))
         if m is None:
             message = 'Bad header line {header}, {filename} is not a PDF.'
-            message = message.format(header=header_line,
+            message = message.format(header=data,
                                      filename=self.filename)
             raise IOError(message)
 

@@ -5,7 +5,16 @@ from unittest.mock import patch
 
 from xmpinpdf import XmpPdf, commandline, IOErrorNoTrailer
 
+
 class TestSuite(unittest.TestCase):
+
+    def test_file_not_present(self):
+        """
+        Should error out gracefully if the input file is not found.
+        """
+        filename = pkg.resource_filename(__name__, 'data/notthere.pdf')
+        with self.assertRaises(FileNotFoundError):
+            XmpPdf(filename)
 
     def test_no_file_trailer_keyword(self):
         """
