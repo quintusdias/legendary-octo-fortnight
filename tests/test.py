@@ -3,11 +3,22 @@ import pkg_resources as pkg
 import unittest
 from unittest.mock import patch
 
-from xmpinpdf import XmpPdf, commandline
+from xmpinpdf import XmpPdf, commandline, IOErrorNoTrailer
 
 class TestSuite(unittest.TestCase):
 
+    def test_no_file_trailer_keyword(self):
+        """
+        Should error out if not file trailer keyword.
+        """
+        filename = pkg.resource_filename(__name__, 'data/pgf_rcupdate1.pdf')
+        with self.assertRaises(IOErrorNoTrailer):
+            XmpPdf(filename)
+
     def test_bad_startxref_value(self):
+        """
+        Should error out if the startxref offset is wrong.
+        """
         filename = pkg.resource_filename(__name__, 'data/QuestionMark.pdf')
         with self.assertRaises(IOError):
             XmpPdf(filename)

@@ -24,6 +24,14 @@ IndirectReference = collections.namedtuple('IndirectReference',
 XRefTable = collections.namedtuple('XRefTable', ['offset', 'generation_number',
                                                  'free'])
 
+
+class IOErrorNoTrailer(IOError):
+    """
+    PDFs without a trailer keyword are not supported
+    """
+    pass
+
+
 class XmpPdf(object):
     """
     Attributes
@@ -228,10 +236,14 @@ class XmpPdf(object):
         self.startxref = int(m.group('startxref'))
     
     def position_to_trailer(self):
+        """
+        The trailer should be close to the end of the file, we are just not
+        sure where.
+        """
         end_pos = self._f.seek(0, os.SEEK_END)
-        count = 0
+        count = 2
         while True:
-            pos = end_pos - 10 ** count
+            pos = max(0, end_pos - 10 ** count)
             self._f.seek(pos)
             data = self._f.read()
             trailer_offset = data.find(b'trailer')
@@ -239,7 +251,10 @@ class XmpPdf(object):
                 # Must go back further.
                 count += 1
                 if count > 5:
-                    raise IOError('Could not find trailer.')
+                    message = ('Could not locate the file trailer.  '
+                               'PDFs without a file trailer are not '
+                               'supported.')
+                    raise IOErrorNoTrailer(message)
                 continue
 
             # We found it, maybe?
