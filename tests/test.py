@@ -7,6 +7,11 @@ from xmpinpdf import XmpPdf, commandline
 
 class TestSuite(unittest.TestCase):
 
+    def test_bad_startxref_value(self):
+        filename = pkg.resource_filename(__name__, 'data/QuestionMark.pdf')
+        with self.assertRaises(IOError):
+            XmpPdf(filename)
+
     def test_trailer_dictionary_with_periods(self):
         filename = pkg.resource_filename(__name__, 'data/Print.pdf')
         pdf = XmpPdf(filename)

@@ -130,7 +130,7 @@ class XmpPdf(object):
         token = self._f.read(4)
         if token != b'xref':
             message = 'Expected to find xref token, got "{token}" instead.'
-            message = message.format(token=data.decode('utf-8'))
+            message = message.format(token=token.decode('utf-8'))
             raise IOError(message)
         self.consume_whitespace()
         self.xref_table = {}
