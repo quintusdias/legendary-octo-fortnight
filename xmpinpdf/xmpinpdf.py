@@ -7,14 +7,20 @@ import re
 _IND_REF_REGEX = re.compile('''(?P<object_number>(\d+))\s
                                (?P<generation_number>(\d+))\sR''', re.VERBOSE)
 
+# Dictionary strings
+#
 # There may be whitespace after the opening chevron.
 # The dictionary string consists of
 #   1) a slash
 #   2) an indeterminate amount of text that may include whitespace, brackets
-#      angle brackets, the dot
+#      angle brackets, the dot, possibly a backslash
 #   3) possible whitespace
 #   4) 1-3 repeated
-_DICTIONARY_PATTERN = '<<\s*(?P<dict_string>((/[\w\s[\]<>.()-]+)+))>>'
+_DICTIONARY_REGEX = re.compile(r'''<<
+                                   \s*
+                                   (?P<dict_string>((/[\w\s[\]<>.()-\\]+)+))
+                                   >>''',
+                               re.VERBOSE)
 
 
 IndirectReference = collections.namedtuple('IndirectReference',
@@ -94,7 +100,8 @@ class XmpPdf(object):
             num_bytes = lst[idx + 1] - lst[idx]
             data = self._f.read(num_bytes).decode('utf-8').rstrip()
 
-        m = re.search(_DICTIONARY_PATTERN, data)
+        #m = re.search(_DICTIONARY_PATTERN, data)
+        m = _DICTIONARY_REGEX.search(data)
         dictionary_string = m.group('dict_string')
 
         pattern = '''/(?P<key>\w+)
@@ -202,7 +209,7 @@ class XmpPdf(object):
         data = self._f.read().decode('utf-8')
 
         # locate the trailer dictionary
-        m = re.search(_DICTIONARY_PATTERN, data)
+        m = _DICTIONARY_REGEX.search(data)
         text = m.group('dict_string')
         items = [item.strip() for item in text.split('/') if item != '']
 

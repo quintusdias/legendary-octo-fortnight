@@ -10,9 +10,17 @@ class TestSuite(unittest.TestCase):
 
     def test_paren_chars_dash_in_dictionary_string(self):
         """
-        Should handle [()/] characters in the dictionary strings.
+        Should handle ( ) / characters in the dictionary strings.
         """
         filename = pkg.resource_filename(__name__, 'data/txt2tags-quickref.pdf')
+        XmpPdf(filename)
+
+    def test_backslash_in_dictionary_string(self):
+        """
+        Should handle backslash characters in the dictionary strings.
+        """
+        relpath = 'data/doclicense-CC-by-nc-nd-eu.pdf'
+        filename = pkg.resource_filename(__name__, relpath)
         XmpPdf(filename)
 
     def test_file_not_present(self):
