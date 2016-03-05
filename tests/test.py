@@ -8,6 +8,14 @@ from xmpinpdf import XmpPdf, commandline, IOErrorNoTrailer
 
 class TestSuite(unittest.TestCase):
 
+    def test_non_utf8_char_in_dictionary_string(self):
+        """
+        Should handle non UTF-8 characters in the dictionary strings.
+        """
+        filename = pkg.resource_filename(__name__, 'data/lvb.pdf')
+        x = XmpPdf(filename)
+        self.assertTrue('ID' in x.trailer_dictionary.keys())
+
     def test_paren_chars_dash_in_dictionary_string(self):
         """
         Should handle ( ) / characters in the dictionary strings.

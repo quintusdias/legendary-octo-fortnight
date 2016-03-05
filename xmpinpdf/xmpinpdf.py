@@ -5,7 +5,7 @@ import re
 # postman
 
 _IND_REF_REGEX = re.compile('''(?P<object_number>(\d+))\s
-                               (?P<generation_number>(\d+))\sR''', re.VERBOSE)
+                               (?P<generation_number>(\d+))\sR''',re.VERBOSE)
 
 # Dictionary strings
 #
@@ -196,24 +196,51 @@ class XmpPdf(object):
                               free=free)
             self.xref_table[obj_num] = entry
 
-    def read_trailer(self):
-        """
-        Read PDF file trailer.
+    def parse_dictionary(self, buffer):
 
-        Extract the offset of the last cross reference section along with the
-        trailer dictionary.
-        """
-        self.position_to_trailer()
+        d = {}
 
-        # Should be able to process the trailer as text.
-        data = self._f.read().decode('utf-8')
+        # items start after <<
+        start_pos = buffer.find(b'<<')
+        buffer = buffer[start_pos + 2:]
+        end_pos = buffer.find(b'>>')
+        buffer = buffer[:end_pos]
+
+        items = buffer.split(b'/')
+        for item in [item.strip() for item in items]:
+            # first part should be ASCII/UTF-8 token, followed by 2nd part that
+            # could be binary.
+            if len(item) == 0:
+                continue
+            stuff = item.split()
+            keyb = stuff[0]
+            values = b' '.join(stuff[1:])
+            key = keyb.decode('utf-8')
+            if key == 'Size':
+                values = int(values.decode('utf-8'))
+            elif key in ['Root', 'Info']:
+                m = _IND_REF_REGEX.match(values.decode('utf-8'))
+                g = m.groupdict()
+                kwargs = {
+                    'object_number': int(g['object_number']),
+                    'generation_number': int(g['generation_number']),
+                }
+                values = IndirectReference(**kwargs)
+            else:
+                try:
+                    values = values.decode('utf-8')
+                except UnicodeDecodeError:                  
+                    pass
+
+            d[key] = values
+
+        return d
 
         # locate the trailer dictionary
         m = _DICTIONARY_REGEX.search(data)
         text = m.group('dict_string')
         items = [item.strip() for item in text.split('/') if item != '']
 
-        d = {}
         for item in items:
             items = item.split()
             key = items[0]
@@ -231,8 +258,24 @@ class XmpPdf(object):
                     'generation_number': int(g['generation_number']),
                 }
                 d[key] = IndirectReference(**kwargs)
-        self.trailer_dictionary = d
 
+        return d
+
+    def read_trailer(self):
+        """
+        Read PDF file trailer.
+
+        Extract the offset of the last cross reference section along with the
+        trailer dictionary.
+        """
+        self.position_to_trailer()
+
+        data = self._f.read()
+
+        self.trailer_dictionary = self.parse_dictionary(data)
+
+        pos = data.find(b'startxref')
+        data = data[pos:].decode('utf-8')
         regex = re.compile("""
                            startxref\s
                            (?P<startxref>\d+)\s
