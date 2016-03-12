@@ -236,31 +236,6 @@ class XmpPdf(object):
 
         return d
 
-        # locate the trailer dictionary
-        m = _DICTIONARY_REGEX.search(data)
-        text = m.group('dict_string')
-        items = [item.strip() for item in text.split('/') if item != '']
-
-        for item in items:
-            items = item.split()
-            key = items[0]
-            value = ' '.join(items[1:])
-            m = _IND_REF_REGEX.match(value)
-            if m is None:
-                try:
-                    d[key] = int(value)
-                except ValueError:
-                    d[key] = value
-            else:
-                g = m.groupdict()
-                kwargs = {
-                    'object_number': int(g['object_number']),
-                    'generation_number': int(g['generation_number']),
-                }
-                d[key] = IndirectReference(**kwargs)
-
-        return d
-
     def read_trailer(self):
         """
         Read PDF file trailer.
