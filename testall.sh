@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 space_regex='[[:space:]]'
 
 locate "*.pdf" | while read pdf
@@ -9,8 +11,17 @@ do
 		echo skipping "$pdf" it is not really there
 		continue
 	fi
+    b=$(basename "$pdf")
+    if [ "$b" = "pgf_mixedmode.pdf" ]
+    then
+        continue
+    fi
+    if [ "$b" = "pgf_rcupdate1.pdf" ]
+    then
+        continue
+    fi
 	fs=$(ls -al "$pdf" | awk '{print $5}')
-	if (( fs > 10000 ))
+	if (( fs > 25000 ))
 	then
 		echo skipping "$pdf"
 		continue
