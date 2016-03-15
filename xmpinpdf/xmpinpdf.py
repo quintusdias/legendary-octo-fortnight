@@ -5,7 +5,7 @@ import re
 # postman
 
 _IND_REF_REGEX = re.compile('''(?P<object_number>(\d+))\s
-                               (?P<generation_number>(\d+))\sR''',re.VERBOSE)
+                               (?P<generation_number>(\d+))\sR''', re.VERBOSE)
 
 # Dictionary strings
 #
@@ -67,17 +67,40 @@ class XmpPdf(object):
 
     def __str__(self):
         msg = ('Filename:  {filename}\n'
+               'Pages: {num_pages}\n'
                'Version:  {version}')
         msg = msg.format(version=self.version,
+                         num_pages=self.document['Pages']['Count'],
                          filename=self.filename)
         return msg
 
     def parse_document(self):
+        """
+        Parse the Document Catalog (catalog dictionary).
+        """
         try:
             root_obj_num = self.trailer_dictionary['Root'].object_number
         except KeyError:
             self.document = None
             return
+
+        self.document = self._read_dictionary(root_obj_num)
+
+    def _read_dictionary(self, obj_num):
+        """
+        Read a dictionary.
+
+        Parameters
+        ----------
+        obj_num : int
+            Index of dictionary object
+
+        Returns
+        -------
+        dict
+            object dictionary
+        """
+        self._f.seek(self.xref_table[obj_num].offset)
 
         # How many bytes to read?  Start at the dictionary object, read until
         # the next non-free object.
@@ -89,41 +112,49 @@ class XmpPdf(object):
                 lst.append(obj.offset)
         lst = sorted(lst)
 
-        self._f.seek(self.xref_table[root_obj_num].offset)
-
         # Read the least amount of data possible.
-        idx = lst.index(self.xref_table[root_obj_num].offset)
+        idx = lst.index(self.xref_table[obj_num].offset)
         if idx == len(lst) - 1:
-            # Read until the end of the file.
+            # It's the last object in the PDF, just read until the end of the
+            # file.
             data = self._f.read().decode('utf-8').rstrip()
         else:
+            # It's not the last object, read up until the next object.
             num_bytes = lst[idx + 1] - lst[idx]
             data = self._f.read(num_bytes).decode('utf-8').rstrip()
 
-        #m = re.search(_DICTIONARY_PATTERN, data)
         m = _DICTIONARY_REGEX.search(data)
         dictionary_string = m.group('dict_string')
 
+        # We neeed to distinguish between dictionary values that are indirect
+        # references and those that are not.
+        # (?P<value>((/[\w\s[\]<>.()-\\]+)+))
         pattern = '''/(?P<key>\w+)
-                     ((\s(?P<obj_num>\d+)\s
-                      (?P<gnum>\d+)\sR)|
-                      (\s?\/(?P<value>\w+)))'''
+                      (
+                         (\s(?P<obj_num>\d+)\s(?P<gen_num>\d+)\sR)
+                       |
+                         (\s?\/(?P<value>([\w\s[\]<>.()-]+)))
+                      )'''
         regex = re.compile(pattern, re.VERBOSE)
 
-        document = {}
+        d = {}
         for m in regex.finditer(dictionary_string):
+            import ipdb; ipdb.set_trace()
             g = m.groupdict()
             key = g['key']
             if g['value'] is None:
+                # It's an indirect reference.
                 kwargs = {
                     'object_number': int(g['obj_num']),
-                    'generation_number': int(g['gnum']),
+                    'generation_number': int(g['gen_num']),
                 }
-                document[key] = IndirectReference(**kwargs)
+                iref = IndirectReference(**kwargs)
+                d[key] = self._read_dictionary(iref.object_number)
             else:
-                document[key] = g['value']
+                # It is not an indirect reference.  Just use the value as-is.
+                d[key] = g['value']
 
-        self.document = document
+        return d
 
     def consume_whitespace(self):
         """
@@ -197,6 +228,20 @@ class XmpPdf(object):
             self.xref_table[obj_num] = entry
 
     def parse_dictionary(self, buffer):
+        """
+        Parse the trailer dictionary.
+
+        Parameters
+        ----------
+        buffer : bytes
+            Array of bytes read from the PDF, starting at the file trailer
+            section.
+
+        Returns
+        -------
+        dict
+            Metadata dictionary
+        """
 
         d = {}
 
@@ -229,7 +274,7 @@ class XmpPdf(object):
             else:
                 try:
                     values = values.decode('utf-8')
-                except UnicodeDecodeError:                  
+                except UnicodeDecodeError:
                     pass
 
             d[key] = values

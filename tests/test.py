@@ -132,6 +132,7 @@ class TestSuite(unittest.TestCase):
         pdf = XmpPdf(filename)
 
         self.assertEqual(pdf.version, 1.3)
+        self.assertEqual(pdf.document['Pages']['Count'], 1)
         self.assertEqual(pdf.trailer_dictionary['Size'], 12)
         self.assertEqual(pdf.startxref, 1820)
 
